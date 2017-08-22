@@ -3003,6 +3003,9 @@ static void cfq_choose_cfqg(struct cfq_data *cfqd)
 {
 	struct cfq_group *cfqg = cfq_get_next_cfqg(cfqd);
 
+	if (!cfqg)
+		return;
+
 	cfqd->serving_group = cfqg;
 
 	/* Restore the workload type data */
@@ -4462,6 +4465,19 @@ out_free:
 	return ret;
 }
 
+// TheCrazyLex@PA apply upstream patch to automatically set slice_idle to 0
+static void cfq_registered_queue(struct request_queue *q)
+{
+	struct elevator_queue *e = q->elevator;
+	struct cfq_data *cfqd = e->elevator_data;
+
+	/*
+	 * Default to IOPS mode with no idling for SSDs
+	 */
+	if (blk_queue_nonrot(q))
+		cfqd->cfq_slice_idle = 0;
+}
+
 /*
  * sysfs parts below -->
  */
@@ -4577,6 +4593,7 @@ static struct elevator_type iosched_cfq = {
 		.elevator_may_queue_fn =	cfq_may_queue,
 		.elevator_init_fn =		cfq_init_queue,
 		.elevator_exit_fn =		cfq_exit_queue,
+		.elevator_registered_fn =	cfq_registered_queue,
 	},
 	.icq_size	=	sizeof(struct cfq_io_cq),
 	.icq_align	=	__alignof__(struct cfq_io_cq),

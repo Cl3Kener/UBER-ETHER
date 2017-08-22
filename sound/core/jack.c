@@ -24,14 +24,34 @@
 #include <linux/module.h>
 #include <sound/jack.h>
 #include <sound/core.h>
+//weihung [NBQM-61]porting aduio function
+#ifdef CONFIG_FIH_NBQ_JACK
+/* NBQ - EricHsieh - [06-831] - Porting key code of MBHC buttons */
+#define BTN0_KEYCODE   0xE2
+#define BTN1_KEYCODE   0x73
+#define BTN2_KEYCODE   0x72
+// NBQ - EricHsieh - 382 - Support Lollipop MBHC
+#define BTN3_KEYCODE   0x73    // KEY_VOLUMEUP
+#define BTN4_KEYCODE   0x72    // KEY_VOLUMEDOWN
+// end NBQ - EricHsieh - 382
+#define BTN5_KEYCODE   0x105
+#define BTN6_KEYCODE   0x106
+#define BTN7_KEYCODE   0x107
+/* end NBQ - EricHsieh - [06-831] */
+#endif
+//weihung [NBQM-61]porting aduio function
 
-static int jack_switch_types[SND_JACK_SWITCH_TYPES] = {
+static int jack_switch_types[] = {
 	SW_HEADPHONE_INSERT,
 	SW_MICROPHONE_INSERT,
 	SW_LINEOUT_INSERT,
 	SW_JACK_PHYSICAL_INSERT,
 	SW_VIDEOOUT_INSERT,
 	SW_LINEIN_INSERT,
+	SW_HPHL_OVERCURRENT,
+	SW_HPHR_OVERCURRENT,
+	SW_UNSUPPORT_INSERT,
+	SW_MICROPHONE2_INSERT,
 };
 
 static int snd_jack_dev_free(struct snd_device *device)
@@ -75,8 +95,44 @@ static int snd_jack_dev_register(struct snd_device *device)
 		if (!(jack->type & testbit))
 			continue;
 
-		if (!jack->key[i])
-			jack->key[i] = BTN_0 + i;
+//weihung [NBQM-61]porting aduio function
+#ifdef CONFIG_FIH_NBQ_JACK
+		/* NBQ - EricHsieh - [06-831] - Porting key code of MBHC buttons */
+		//if (!jack->key[i])
+		//	jack->key[i] = BTN_0 + i;
+		switch(i)
+		{
+		case 0:
+			jack->key[0] = BTN0_KEYCODE;
+			break;
+		case 1:
+			jack->key[1] = BTN1_KEYCODE;
+			break;
+		case 2:
+			jack->key[2] = BTN2_KEYCODE;
+			break;
+		case 3:
+			jack->key[3] = BTN3_KEYCODE;
+			break;
+		case 4:
+			jack->key[4] = BTN4_KEYCODE;
+			break;
+		case 5:
+			jack->key[5] = BTN5_KEYCODE;
+			break;
+		case 6:
+			jack->key[6] = BTN6_KEYCODE;
+			break;
+		case 7:
+			jack->key[7] = BTN7_KEYCODE;
+			break;
+		}
+		/* end NBQ - EricHsieh - [06-831] */
+#else
+       if (!jack->key[i])
+          jack->key[i] = BTN_0 + i;
+#endif
+//weihung [NBQM-61]porting aduio function
 
 		input_set_capability(jack->input_dev, EV_KEY, jack->key[i]);
 	}
@@ -128,7 +184,7 @@ int snd_jack_new(struct snd_card *card, const char *id, int type,
 
 	jack->type = type;
 
-	for (i = 0; i < SND_JACK_SWITCH_TYPES; i++)
+	for (i = 0; i < ARRAY_SIZE(jack_switch_types); i++)
 		if (type & (1 << i))
 			input_set_capability(jack->input_dev, EV_SW,
 					     jack_switch_types[i]);
